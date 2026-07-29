@@ -7,8 +7,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import recruitment.dev.jobofferservice.dto.JobOfferDto;
 import recruitment.dev.jobofferservice.entities.*;
+import recruitment.dev.jobofferservice.exception.JobOfferNotFoundException;
 import recruitment.dev.jobofferservice.mapper.JobOfferMapper;
 import recruitment.dev.jobofferservice.respositories.JobOfferRepository;
+
+import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -20,7 +23,7 @@ public class JobOfferServiceImpl implements JobOfferService {
     @Override
     public JobOfferDto createJobOffer(JobOfferDto dto) {
 
-        validateDates(dto);
+        validateJobOffer(dto);
 
         JobOffer jobOffer = mapper.toEntity(dto);
 
@@ -32,7 +35,7 @@ public class JobOfferServiceImpl implements JobOfferService {
     @Override
     public JobOfferDto updateJobOffer(Long id, JobOfferDto dto) {
 
-        validateDates(dto);
+        validateJobOffer(dto);
 
         JobOffer jobOffer = findJobOffer(id);
 
@@ -102,18 +105,54 @@ public class JobOfferServiceImpl implements JobOfferService {
 
         return repository.findById(id)
                 .orElseThrow(() ->
-                        new RuntimeException("Job offer not found"));
+                        new JobOfferNotFoundException(id));
+    }
+
+    private void validateJobOffer(JobOfferDto dto) {
+        if (dto == null) {
+            throw new IllegalArgumentException("Job offer is required");
+        }
+
+        validateDates(dto);
+        validateRequirements(dto.getRequirements());
+        validateSkills(dto.getSkills());
     }
 
     private void validateDates(JobOfferDto dto) {
+        if (dto.getOpeningDate() == null) {
+            throw new IllegalArgumentException("Opening date is required");
+        }
+
+        if (dto.getClosingDate() == null) {
+            throw new IllegalArgumentException("Closing date is required");
+        }
 
         if (dto.getClosingDate().isBefore(dto.getOpeningDate())) {
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Closing date must be after opening date");
         }
     }
 
+    private void validateRequirements(List<recruitment.dev.jobofferservice.dto.JobRequirementDto> requirements) {
+        if (requirements == null || requirements.isEmpty()) {
+            throw new IllegalArgumentException("At least one requirement is required");
+        }
+    }
+
+    private void validateSkills(List<recruitment.dev.jobofferservice.dto.JobSkillDto> skills) {
+        if (skills == null || skills.isEmpty()) {
+            throw new IllegalArgumentException("At least one skill is required");
+        }
+    }
+
     private void linkChildren(JobOffer jobOffer) {
+        if (jobOffer.getRequirements() == null) {
+            jobOffer.setRequirements(new java.util.ArrayList<>());
+        }
+
+        if (jobOffer.getSkills() == null) {
+            jobOffer.setSkills(new java.util.ArrayList<>());
+        }
 
         jobOffer.getRequirements()
                 .forEach(r -> r.setJobOffer(jobOffer));

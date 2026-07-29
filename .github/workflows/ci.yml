@@ -1,4 +1,4 @@
-name: RAG Service CI/CD
+name: JOB-OFFER Service CI/CD
 
 on:
   push:
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 env:
-  IMAGE_NAME: ihab0/rag-service
+  IMAGE_NAME: ihab0/job-offer-service
 
 jobs:
 
@@ -153,7 +153,7 @@ jobs:
             ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.value }}
             ${{ env.IMAGE_NAME }}:sha-${{ steps.commit.outputs.value }}
           labels: |
-            org.opencontainers.image.title=rag-service
+            org.opencontainers.image.title=job-offer-service
             org.opencontainers.image.version=${{ steps.version.outputs.value }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}

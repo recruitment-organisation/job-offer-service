@@ -17,11 +17,11 @@ import recruitment.dev.jobofferservice.service.JobOfferService;
 @RestController
 @RequestMapping("/job-offers")
 @RequiredArgsConstructor
-@PreAuthorize( "hasRole('HR')")
 public class JobOfferController {
 
     private final JobOfferService jobOfferService;
 
+    @PreAuthorize("hasRole('HR')")
     @PostMapping("/create")
     public ResponseEntity<JobOfferDto> createJobOffer(
             @Valid @RequestBody JobOfferDto jobOfferDto) {
@@ -31,6 +31,7 @@ public class JobOfferController {
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
+    @PreAuthorize("hasRole('HR')")
     @PutMapping("/update/{id}")
     public ResponseEntity<JobOfferDto> updateJobOffer(
             @PathVariable Long id,
@@ -40,6 +41,7 @@ public class JobOfferController {
                 jobOfferService.updateJobOffer(id, jobOfferDto));
     }
 
+    @PreAuthorize("hasAnyRole('HR', 'CANDIDATE')")
     @GetMapping("/get/{id}")
     public ResponseEntity<JobOfferDto> getJobOfferById(
             @PathVariable Long id) {
@@ -48,43 +50,52 @@ public class JobOfferController {
                 jobOfferService.getJobOfferById(id));
     }
 
+    @PreAuthorize("hasAnyRole('HR', 'CANDIDATE')")
     @GetMapping("/getall")
     public ResponseEntity<Page<JobOfferDto>> getAllJobOffers(
-            Pageable pageable) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
 
         return ResponseEntity.ok(
-                jobOfferService.getAllJobOffers(pageable));
+                jobOfferService.getAllJobOffers(Pageable.ofSize(size).withPage(page)));
     }
 
+    @PreAuthorize("hasAnyRole('HR', 'CANDIDATE')")
     @GetMapping("/status/{status}")
     public ResponseEntity<Page<JobOfferDto>> getByStatus(
             @PathVariable JobStatus status,
-            Pageable pageable) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
 
         return ResponseEntity.ok(
-                jobOfferService.getJobOffersByStatus(status, pageable));
+                jobOfferService.getJobOffersByStatus(status, Pageable.ofSize(size).withPage(page)));
     }
 
 
 
+    @PreAuthorize("hasRole('HR')")
     @GetMapping("/employment-type/{employmentType}")
     public ResponseEntity<Page<JobOfferDto>> getByEmploymentType(
             @PathVariable EmploymentType employmentType,
-            Pageable pageable) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
 
         return ResponseEntity.ok(
-                jobOfferService.getJobOffersByEmploymentType(employmentType, pageable));
+                jobOfferService.getJobOffersByEmploymentType(employmentType, Pageable.ofSize(size).withPage(page)));
     }
 
+    @PreAuthorize("hasRole('HR')")
     @GetMapping("/experience-level/{experienceLevel}")
     public ResponseEntity<Page<JobOfferDto>> getByExperienceLevel(
             @PathVariable ExperienceLevel experienceLevel,
-            Pageable pageable) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
 
         return ResponseEntity.ok(
-                jobOfferService.getJobOffersByExperienceLevel(experienceLevel, pageable));
+                jobOfferService.getJobOffersByExperienceLevel(experienceLevel, Pageable.ofSize(size).withPage(page)));
     }
 
+    @PreAuthorize("hasRole('HR')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteJobOffer(
             @PathVariable Long id) {

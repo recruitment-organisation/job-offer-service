@@ -25,6 +25,10 @@ public class JobOffer {
     @Column(nullable = false)
     private String title;
 
+    /** Business area used to group and search job offers. */
+    @Column(length = 100)
+    private String domain;
+
     @Column(length = 3000)
     private String description;
 

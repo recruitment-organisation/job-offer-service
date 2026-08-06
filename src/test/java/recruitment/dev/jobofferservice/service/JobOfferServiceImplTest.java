@@ -33,7 +33,7 @@ class JobOfferServiceImplTest {
 
     @Test
     void shouldRejectClosingDateBeforeOpeningDate() {
-        JobOfferServiceImpl service = new JobOfferServiceImpl(new InMemoryJobOfferRepository(), new SimpleJobOfferMapper());
+        JobOfferServiceImpl service = service(new InMemoryJobOfferRepository());
 
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
@@ -50,7 +50,7 @@ class JobOfferServiceImplTest {
 
     @Test
     void shouldRejectMissingRequirements() {
-        JobOfferServiceImpl service = new JobOfferServiceImpl(new InMemoryJobOfferRepository(), new SimpleJobOfferMapper());
+        JobOfferServiceImpl service = service(new InMemoryJobOfferRepository());
 
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
@@ -67,7 +67,7 @@ class JobOfferServiceImplTest {
 
     @Test
     void shouldRejectMissingSkills() {
-        JobOfferServiceImpl service = new JobOfferServiceImpl(new InMemoryJobOfferRepository(), new SimpleJobOfferMapper());
+        JobOfferServiceImpl service = service(new InMemoryJobOfferRepository());
 
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
@@ -84,7 +84,7 @@ class JobOfferServiceImplTest {
 
     @Test
     void shouldThrowWhenJobOfferDoesNotExist() {
-        JobOfferServiceImpl service = new JobOfferServiceImpl(new InMemoryJobOfferRepository(), new SimpleJobOfferMapper());
+        JobOfferServiceImpl service = service(new InMemoryJobOfferRepository());
 
         JobOfferNotFoundException exception = assertThrows(
                 JobOfferNotFoundException.class,
@@ -97,7 +97,7 @@ class JobOfferServiceImplTest {
     @Test
     void shouldCreateJobOfferAndLinkItsChildren() {
         InMemoryJobOfferRepository repository = new InMemoryJobOfferRepository();
-        JobOfferServiceImpl service = new JobOfferServiceImpl(repository, new SimpleJobOfferMapper());
+        JobOfferServiceImpl service = service(repository);
 
         JobOfferDto result = service.createJobOffer(buildDto(
                 LocalDate.of(2026, 7, 29),
@@ -116,7 +116,7 @@ class JobOfferServiceImplTest {
     @Test
     void shouldReplaceChildrenWhenUpdatingJobOffer() {
         InMemoryJobOfferRepository repository = new InMemoryJobOfferRepository();
-        JobOfferServiceImpl service = new JobOfferServiceImpl(repository, new SimpleJobOfferMapper());
+        JobOfferServiceImpl service = service(repository);
         JobOffer existing = new JobOffer();
         existing.setId(1L);
         existing.setRequirements(new ArrayList<>(List.of(JobRequirement.builder().requirement("Legacy").build())));
@@ -139,9 +139,33 @@ class JobOfferServiceImplTest {
     }
 
     @Test
+    void shouldKeepThePathIdWhenUpdatingWithoutAnIdInTheRequestBody() {
+        InMemoryJobOfferRepository repository = new InMemoryJobOfferRepository();
+        JobOfferServiceImpl service = service(repository);
+        JobOffer existing = new JobOffer();
+        existing.setId(1L);
+        existing.setRequirements(new ArrayList<>(List.of(JobRequirement.builder().requirement("Legacy").build())));
+        existing.setSkills(new ArrayList<>(List.of(JobSkills.builder().skillName("Legacy").mandatory(false).build())));
+        repository.save(existing);
+
+        JobOfferDto request = buildDto(
+                LocalDate.of(2026, 7, 29),
+                LocalDate.of(2026, 8, 15),
+                List.of(JobRequirementDto.builder().requirement("Docker").build()),
+                List.of(JobSkillDto.builder().skillName("Kubernetes").mandatory(true).build())
+        );
+        request.setId(null);
+
+        JobOfferDto result = service.updateJobOffer(1L, request);
+
+        assertEquals(1L, result.getId());
+        assertEquals("Backend Engineer", repository.findById(1L).orElseThrow().getTitle());
+    }
+
+    @Test
     void shouldDeleteExistingJobOffer() {
         InMemoryJobOfferRepository repository = new InMemoryJobOfferRepository();
-        JobOfferServiceImpl service = new JobOfferServiceImpl(repository, new SimpleJobOfferMapper());
+        JobOfferServiceImpl service = service(repository);
         JobOffer existing = new JobOffer();
         existing.setId(1L);
         repository.save(existing);
@@ -154,7 +178,7 @@ class JobOfferServiceImplTest {
     @Test
     void shouldReturnMappedPageOfJobOffers() {
         InMemoryJobOfferRepository repository = new InMemoryJobOfferRepository();
-        JobOfferServiceImpl service = new JobOfferServiceImpl(repository, new SimpleJobOfferMapper());
+        JobOfferServiceImpl service = service(repository);
         JobOffer first = new JobOffer();
         first.setId(1L);
         first.setRequirements(new ArrayList<>());
@@ -191,6 +215,10 @@ class JobOfferServiceImplTest {
                 .requirements(requirements)
                 .skills(skills)
                 .build();
+    }
+
+    private JobOfferServiceImpl service(JobOfferRepository repository) {
+        return new JobOfferServiceImpl(repository, new SimpleJobOfferMapper());
     }
 
     private static class InMemoryJobOfferRepository implements JobOfferRepository {
@@ -397,6 +425,20 @@ class JobOfferServiceImplTest {
         public JobOffer toEntity(JobOfferDto dto) {
             JobOffer entity = new JobOffer();
             updateEntity(dto, entity);
+            entity.setId(dto.getId());
+            entity.setRequirements(dto.getRequirements().stream()
+                    .map(requirementDto -> JobRequirement.builder()
+                            .id(requirementDto.getId())
+                            .requirement(requirementDto.getRequirement())
+                            .build())
+                    .collect(java.util.stream.Collectors.toCollection(ArrayList::new)));
+            entity.setSkills(dto.getSkills().stream()
+                    .map(skillDto -> JobSkills.builder()
+                            .id(skillDto.getId())
+                            .skillName(skillDto.getSkillName())
+                            .mandatory(skillDto.isMandatory())
+                            .build())
+                    .collect(java.util.stream.Collectors.toCollection(ArrayList::new)));
             return entity;
         }
 
@@ -411,25 +453,6 @@ class JobOfferServiceImplTest {
             entity.setOpeningDate(dto.getOpeningDate());
             entity.setClosingDate(dto.getClosingDate());
             entity.setStatus(dto.getStatus());
-
-            List<JobRequirement> requirements = new ArrayList<>();
-            for (JobRequirementDto requirementDto : dto.getRequirements()) {
-                requirements.add(JobRequirement.builder()
-                        .id(requirementDto.getId())
-                        .requirement(requirementDto.getRequirement())
-                        .build());
-            }
-            entity.setRequirements(requirements);
-
-            List<JobSkills> skills = new ArrayList<>();
-            for (JobSkillDto skillDto : dto.getSkills()) {
-                skills.add(JobSkills.builder()
-                        .id(skillDto.getId())
-                        .skillName(skillDto.getSkillName())
-                        .mandatory(skillDto.isMandatory())
-                        .build());
-            }
-            entity.setSkills(skills);
         }
     }
 }

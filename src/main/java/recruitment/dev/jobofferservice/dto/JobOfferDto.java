@@ -24,6 +24,8 @@ public class JobOfferDto {
     @NotBlank(message = "Title is required")
     @Size(max = 100, message = "Title must not exceed 100 characters")
     private String title;
+    @Size(max = 100, message = "Domain must not exceed 100 characters")
+    private String domain;
     @NotBlank(message = "Description is required")
     @Size(max = 3000, message = "Description must not exceed 3000 characters")
     private String description;

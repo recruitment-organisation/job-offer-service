@@ -1,6 +1,8 @@
 package recruitment.dev.jobofferservice.service;
 
-import lombok.RequiredArgsConstructor;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -10,15 +12,37 @@ import recruitment.dev.jobofferservice.entities.*;
 import recruitment.dev.jobofferservice.exception.JobOfferNotFoundException;
 import recruitment.dev.jobofferservice.mapper.JobOfferMapper;
 import recruitment.dev.jobofferservice.respositories.JobOfferRepository;
+import recruitment.dev.jobofferservice.outbox.OutboxEvent;
+import recruitment.dev.jobofferservice.outbox.OutboxEventRepository;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 @Service
-@RequiredArgsConstructor
 @Transactional
 public class JobOfferServiceImpl implements JobOfferService {
 
     private final JobOfferRepository repository;
     private final JobOfferMapper mapper;
+    private final OutboxEventRepository outboxEventRepository;
+    private final ObjectMapper objectMapper;
+
+    @Autowired
+    public JobOfferServiceImpl(
+            JobOfferRepository repository,
+            JobOfferMapper mapper,
+            OutboxEventRepository outboxEventRepository,
+            ObjectMapper objectMapper
+    ) {
+        this.repository = repository;
+        this.mapper = mapper;
+        this.outboxEventRepository = outboxEventRepository;
+        this.objectMapper = objectMapper;
+    }
+
+    JobOfferServiceImpl(JobOfferRepository repository, JobOfferMapper mapper) {
+        this(repository, mapper, null, null);
+    }
 
     @Override
     public JobOfferDto createJobOffer(JobOfferDto dto) {
@@ -29,7 +53,11 @@ public class JobOfferServiceImpl implements JobOfferService {
 
         linkChildren(jobOffer);
 
-        return mapper.toDto(repository.save(jobOffer));
+        JobOffer saved = repository.save(jobOffer);
+        if (saved.getStatus() == JobStatus.OPEN) {
+            enqueueJobOfferEvent(saved, "job-offer.created");
+        }
+        return mapper.toDto(saved);
     }
 
     @Override
@@ -38,8 +66,11 @@ public class JobOfferServiceImpl implements JobOfferService {
         validateJobOffer(dto);
 
         JobOffer jobOffer = findJobOffer(id);
+        JobStatus previousStatus = jobOffer.getStatus();
 
         mapper.updateEntity(dto, jobOffer);
+        // The resource identifier comes from the path, never from the request body.
+        jobOffer.setId(id);
 
         updateRequirements(jobOffer, dto);
 
@@ -47,7 +78,11 @@ public class JobOfferServiceImpl implements JobOfferService {
 
         linkChildren(jobOffer);
 
-        return mapper.toDto(repository.save(jobOffer));
+        JobOffer updated = repository.save(jobOffer);
+        if (updated.getStatus() == JobStatus.OPEN) {
+            enqueueJobOfferEvent(updated, previousStatus == JobStatus.OPEN ? "job-offer.updated" : "job-offer.created");
+        }
+        return mapper.toDto(updated);
     }
 
     @Override
@@ -192,5 +227,40 @@ public class JobOfferServiceImpl implements JobOfferService {
 
             jobOffer.getSkills().add(skill);
         });
+    }
+
+    private void enqueueJobOfferEvent(JobOffer jobOffer, String eventType) {
+        if (outboxEventRepository == null || objectMapper == null) {
+            return;
+        }
+        JobOfferEvent event = new JobOfferEvent(
+                UUID.randomUUID().toString(),
+                eventType,
+                Instant.now().toString(),
+                jobOffer.getId(),
+                jobOffer.getTitle(),
+                jobOffer.getLocation(),
+                jobOffer.getStatus().name()
+        );
+        try {
+            outboxEventRepository.save(new OutboxEvent(
+                    "recruitment.job-offer.v1",
+                    String.valueOf(jobOffer.getId()),
+                    objectMapper.writeValueAsString(event)
+            ));
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Unable to serialize " + eventType + " event", exception);
+        }
+    }
+
+    private record JobOfferEvent(
+            String eventId,
+            String eventType,
+            String occurredAt,
+            Long jobOfferId,
+            String title,
+            String location,
+            String status
+    ) {
     }
 }

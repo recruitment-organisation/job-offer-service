@@ -41,7 +41,7 @@ public class JobOfferController {
                 jobOfferService.updateJobOffer(id, jobOfferDto));
     }
 
-    @PreAuthorize("hasAnyRole('HR', 'CANDIDATE')")
+    @PreAuthorize("hasAnyRole('HR', 'CANDIDATE', 'MANAGER')")
     @GetMapping("/get/{id}")
     public ResponseEntity<JobOfferDto> getJobOfferById(
             @PathVariable Long id) {
@@ -50,7 +50,7 @@ public class JobOfferController {
                 jobOfferService.getJobOfferById(id));
     }
 
-    @PreAuthorize("hasAnyRole('HR', 'CANDIDATE')")
+    @PreAuthorize("hasAnyRole('HR', 'CANDIDATE', 'MANAGER')")
     @GetMapping("/getall")
     public ResponseEntity<Page<JobOfferDto>> getAllJobOffers(
             @RequestParam(defaultValue = "0") int page,
@@ -60,7 +60,7 @@ public class JobOfferController {
                 jobOfferService.getAllJobOffers(Pageable.ofSize(size).withPage(page)));
     }
 
-    @PreAuthorize("hasAnyRole('HR', 'CANDIDATE')")
+    @PreAuthorize("hasAnyRole('HR', 'CANDIDATE', 'MANAGER')")
     @GetMapping("/status/{status}")
     public ResponseEntity<Page<JobOfferDto>> getByStatus(
             @PathVariable JobStatus status,

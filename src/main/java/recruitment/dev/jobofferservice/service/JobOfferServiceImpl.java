@@ -100,6 +100,18 @@ public class JobOfferServiceImpl implements JobOfferService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Page<JobOfferDto> getAllJobOffersForCompany(Long companyId, Pageable pageable) {
+        return repository.findByCompanyId(companyId, pageable).map(mapper::toDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<JobOfferDto> getJobOffersByCompanyAndStatus(Long companyId, JobStatus status, Pageable pageable) {
+        return repository.findByCompanyIdAndStatus(companyId, status, pageable).map(mapper::toDto);
+    }
+
+    @Override
     public void deleteJobOffer(Long id) {
 
         repository.delete(findJobOffer(id));

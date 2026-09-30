@@ -16,6 +16,8 @@ public interface JobOfferService {
     JobOfferDto getJobOfferById(Long id);
 
     Page<JobOfferDto> getAllJobOffers(Pageable pageable);
+    Page<JobOfferDto> getAllJobOffersForCompany(Long companyId, Pageable pageable);
+    Page<JobOfferDto> getJobOffersByCompanyAndStatus(Long companyId, JobStatus status, Pageable pageable);
 
     void deleteJobOffer(Long id);
 

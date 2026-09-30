@@ -21,6 +21,7 @@ import java.util.List;
 public class JobOfferDto {
 
     private Long id;
+    private Long companyId;
     @NotBlank(message = "Title is required")
     @Size(max = 100, message = "Title must not exceed 100 characters")
     private String title;

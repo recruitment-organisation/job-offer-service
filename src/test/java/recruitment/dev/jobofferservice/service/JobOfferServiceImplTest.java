@@ -242,6 +242,16 @@ class JobOfferServiceImplTest {
         }
 
         @Override
+        public Page<JobOffer> findByCompanyId(Long companyId, Pageable pageable) {
+            return Page.empty();
+        }
+
+        @Override
+        public Page<JobOffer> findByCompanyIdAndStatus(Long companyId, JobStatus status, Pageable pageable) {
+            return Page.empty();
+        }
+
+        @Override
         public List<JobOffer> findAll() {
             return new ArrayList<>(offers.values());
         }

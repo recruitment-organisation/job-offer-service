@@ -22,6 +22,7 @@ public interface JobOfferMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "requirements", ignore = true)
     @Mapping(target = "skills", ignore = true)
+    @Mapping(target = "companyId", ignore = true)
     void updateEntity(JobOfferDto dto,
                       @MappingTarget JobOffer entity);
 }

@@ -15,7 +15,8 @@ public interface JobOfferRepository extends JpaRepository<JobOffer, Long> {
     Page<JobOffer> findByEmploymentType(EmploymentType type, Pageable pageable);
 
     Page<JobOffer> findByExperienceLevel(ExperienceLevel level, Pageable pageable);
+    Page<JobOffer> findByCompanyId(Long companyId, Pageable pageable);
+    Page<JobOffer> findByCompanyIdAndStatus(Long companyId, JobStatus status, Pageable pageable);
 
 }
-
 
